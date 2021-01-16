@@ -111,6 +111,8 @@ public class SSH {
                 print(output, terminator: "")
                 fflush(stdout)
             }
+            
+            return true
         })
     }
     
@@ -123,6 +125,8 @@ public class SSH {
         var ongoing = ""
         let status = try execute(command) { (output) in
             ongoing += output
+            
+            return true
         }
         return (status, ongoing)
     }
@@ -134,7 +138,7 @@ public class SSH {
     ///   - output: block handler called every time a chunk of command output is received
     /// - Returns: exit code of the command
     /// - Throws: SSHError if the command couldn't be executed
-    public func execute(_ command: String, output: ((_ output: String) -> ())) throws -> Int32 {
+    public func execute(_ command: String, output: ((_ output: String) -> Bool)) throws -> Int32 {
         let channel = try session.openCommandChannel()
         
         if let ptyType = ptyType {
@@ -150,7 +154,9 @@ public class SSH {
                 guard let str = String(data: data, encoding: .utf8) else {
                     throw SSHError.genericError("SSH failed to create string using UTF8 encoding")
                 }
-                output(str)
+                if !output(str) {
+                    dataLeft = false
+                }
             case .done:
                 dataLeft = false
             case .eagain:
